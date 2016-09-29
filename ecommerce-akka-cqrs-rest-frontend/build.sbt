@@ -1,8 +1,4 @@
-import CommonSettings._
+import Dependencies._
 
-lazy val `ecommerce-akka-cqrs-rest-frontend` = project.in(file(".")).
-  settings(commonSettings: _*).
-  settings(
-    // other settings
-  )
-  .dependsOn("ecommerce-akka-cqrs-contracts")
+libraryDependencies ++= frontendDeps
+mainClass in assembly := Some("com.nikhu.ecommerce.shoppingcart.WebServer")

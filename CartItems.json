@@ -1,0 +1,22 @@
+[
+  {
+    "product": {
+      "id": "sku-272",
+      "version": 0,
+      "name": "Nexus 5",
+      "productType": "Mobile Phones",
+      "price": 301.0
+    },
+    "quantity": 1
+  },
+  {
+    "product": {
+      "id": "sku-9261",
+      "version": 0,
+      "name": "iPhone 6 Plus",
+      "productType": "Mobile Phones",
+      "price": 662.0
+    },
+    "quantity": 5
+  }
+]

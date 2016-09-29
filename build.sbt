@@ -1,10 +1,6 @@
-import CommonSettings._
+import com.typesafe.sbt.packager.archetypes.JavaAppPackaging
+import spray.revolver.RevolverPlugin.autoImport.Revolver
 
-lazy val `ecommerce-akka-cqrs-commons` = project.in(file("ecommerce-akka-cqrs-commons"))
-lazy val `ecommerce-akka-cqrs-contracts` = project.in(file("ecommerce-akka-cqrs-contracts"))
-lazy val `ecommerce-akka-cqrs-backend` = project.in(file("ecommerce-akka-cqrs-backend"))
-lazy val `ecommerce-akka-cqrs-rest-frontend` = project.in(file("ecommerce-akka-cqrs-rest-frontend"))
+enablePlugins(JavaAppPackaging)
 
-lazy val root = (project in file(".")).
-  settings(commonSettings: _*).
-  aggregate(`ecommerce-akka-cqrs-commons`, `ecommerce-akka-cqrs-contracts`, `ecommerce-akka-cqrs-backend`, `ecommerce-akka-cqrs-rest-frontend`)
+Revolver.settings
