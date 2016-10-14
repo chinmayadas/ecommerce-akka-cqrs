@@ -5,6 +5,7 @@ object Dependencies {
   lazy val akkaVersion = "2.4.10"
   val scalaTestVersion = "3.0.0"
   val log4jVersion = "2.6.2"
+  val scaldiV = "0.5.7"
 
   // Libraries 
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
@@ -13,6 +14,9 @@ object Dependencies {
   val akkaContrib = "com.typesafe.akka" %% "akka-contrib" % akkaVersion
   val akkaRemote = "com.typesafe.akka" %% "akka-remote" % akkaVersion
   val akkaCluster = "com.typesafe.akka" %% "akka-cluster" % akkaVersion
+  val akkaClusterShrading = "com.typesafe.akka" %% "akka-cluster-sharding" % akkaVersion
+
+  val scalDi = "org.scaldi" %% "scaldi-akka" % scaldiV
 
   val specs2core = "org.specs2" %% "specs2-core" % "3.8.5"
 
@@ -35,7 +39,7 @@ object Dependencies {
   // Projects
   val commonsDeps = Seq(akkaActor, akkaStream, akkaPersistence, akkaContrib, akkaRemote, specs2core % Test)
 
-  val backendDeps = Seq(akkaCluster, levelDb, levelDbJniAll, slf4j, scalaLogging, akkaSlf4j, logBack)
+  val backendDeps = Seq(akkaCluster, scalDi, akkaClusterShrading, levelDb, levelDbJniAll, slf4j, scalaLogging, akkaSlf4j, logBack)
 
-  val frontendDeps = Seq(akkaHttp, akkaSprayJson, akkaHttpTestkit, slf4j, scalaLogging, akkaSlf4j, logBack, scalaTest)
+  val frontendDeps = Seq(akkaHttp, scalDi, akkaClusterShrading, akkaSprayJson, akkaHttpTestkit, slf4j, scalaLogging, akkaSlf4j, logBack, scalaTest)
 }

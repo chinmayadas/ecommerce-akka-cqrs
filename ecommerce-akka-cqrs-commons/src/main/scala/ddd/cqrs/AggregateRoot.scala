@@ -24,6 +24,15 @@ abstract class AggregateRoot[S <: AggregateState[S]] extends AggregateRootBase {
 
   def state = sm.state
 
+  override def receiveCommand: Receive = {
+    case de: DomainCommand => {
+      log.debug("Received command: " + de)
+      log.debug("Sender of command: " + sender)
+      handleCommand.applyOrElse(de, unhandled)
+    }
+    case _ => log.debug("Unknown command.")
+  }
+
   override def receiveRecover = {
     case event: DomainEvent => {
       log.debug("Recovering event, {}", event.id)
@@ -33,18 +42,8 @@ abstract class AggregateRoot[S <: AggregateState[S]] extends AggregateRootBase {
       log.info("Restore your full state from the data in the snapshot.")
     case RecoveryCompleted => {
       log.info("Recovery completed") // use logger here
-      log.debug("state:" + sm.initialized)
     }
     case _ => log.info("Received unknown message.")
-  }
-
-  override def receiveCommand: Receive = {
-    case de: DomainCommand => {
-      log.debug("Received command: " + de)
-      log.debug("Sender of command: " + sender)
-      handleCommand.applyOrElse(de, unhandled)
-    }
-    case _ => log.debug("Unknown command.")
   }
 
   def handleCommand: Receive

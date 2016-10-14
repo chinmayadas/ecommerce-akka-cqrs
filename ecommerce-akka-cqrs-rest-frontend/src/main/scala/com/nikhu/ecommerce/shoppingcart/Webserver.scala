@@ -1,16 +1,18 @@
 package com.nikhu.ecommerce.shoppingcart
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
+import akka.cluster.sharding.{ClusterSharding, ShardRegion}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
-import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
+import scaldi.akka.AkkaInjectable
 import spray.json.DefaultJsonProtocol
+import akka.pattern.ask
 
 import scala.concurrent.duration._
 import scala.util.Success
@@ -26,16 +28,39 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val cartItemFormat = jsonFormat2(CartItem)
 }
 
+object Configs {
+  private val root = ConfigFactory.load()
+  val frontEndConf          = root.getConfig("frontEnd")
+  val clusterProxyConf          = root.getConfig("clusterProxy")
+}
+
 object WebServer extends LazyLogging with JsonSupport with App {
 
 
-  implicit val actorSystem = ActorSystem("shopping-cart-akka-http-microservice")
+  implicit val actorSystem = ActorSystem("frontend", Configs.frontEndConf)
   implicit val materializer = ActorMaterializer()
   // needed for the future flatMap/onComplete in the end
   implicit val executionContext = actorSystem.dispatcher
 
-  val selection = actorSystem.actorSelection("akka.tcp://cartBackendApp@127.0.0.1:2552/user/cartActor")
-  logger.debug("remote actor path: " + selection.pathString)
+  //val cart = ClusterSharding(actorSystem).shardRegion("Cart")
+
+  //val cart = actorSystem.actorSelection("akka.tcp://default@127.0.0.1:2552/system/sharding/Cart")
+  //logger.debug("remote actor path: " + cart.pathString)
+  // Start sharding in proxy mode on every frontend node
+
+
+    val numberOfShards = 100
+
+    val cart: ActorRef = ClusterSharding(ActorSystem("clusterProxy", Configs.clusterProxyConf)).startProxy(
+      typeName = "Cart",
+      role = None,
+      extractEntityId = extractEntityId(),
+      extractShardId = extractShardId(numberOfShards)
+    )
+
+    logger.debug("cartRegion: " + cart.path.name)
+
+
   implicit val timeout = Timeout(1 minutes)
 
   val routes = {
@@ -45,7 +70,7 @@ object WebServer extends LazyLogging with JsonSupport with App {
           post {
             entity(as[CartItem]) {
               cartItem => {
-                onSuccess((selection ? AddToCart(CartId("123"), cartItem)).mapTo[Success[String]]) { success =>
+                onSuccess((cart ? AddToCart(CartId("123"), cartItem)).mapTo[Success[String]]) { success =>
                   complete(HttpResponse(status = StatusCodes.OK, entity = success.value))
                 }
               }
@@ -55,8 +80,7 @@ object WebServer extends LazyLogging with JsonSupport with App {
           post {
             entity(as[List[CartItem]]) {
               cartItems => {
-                selection ? CreateCart(CartId("123"), cartItems)
-                onSuccess((selection ? CreateCart(CartId("123"), cartItems)).mapTo[Success[String]]) { success =>
+                onSuccess((cart ? CreateCart(CartId("123"), cartItems)).mapTo[Success[String]]) { success =>
                   complete(HttpResponse(status = StatusCodes.OK, entity = success.value))
                 }
               }
@@ -66,9 +90,18 @@ object WebServer extends LazyLogging with JsonSupport with App {
     }
   }
 
+  def extractEntityId(): ShardRegion.ExtractEntityId = {
+    case msg@CreateCart(id, _) => (id.value.toString, msg)
+    case msg@AddToCart(id, _) => (id.value.toString, msg)
+  }
 
-  val config = ConfigFactory.load()
-  val (interface, port) = (config.getString("http.interface"), config.getInt("http.port"))
+  def extractShardId(numberOfShards: Int): ShardRegion.ExtractShardId = {
+    case CreateCart(id, _) => Math.abs(id.hashCode() % numberOfShards).toString
+    case AddToCart(id, _) =>  Math.abs(id.hashCode() % numberOfShards).toString
+  }
+
+  // val config = ConfigFactory.load()
+  val (interface, port) = (Configs.frontEndConf.getString("http.interface"), Configs.frontEndConf.getInt("http.port"))
   val bindingFuture = Http().bindAndHandle(handler = routes, interface = interface, port = port)
 
   logger.info(s"Server online at, http://$interface:$port/")

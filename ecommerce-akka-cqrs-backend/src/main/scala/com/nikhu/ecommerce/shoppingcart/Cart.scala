@@ -1,8 +1,10 @@
 package com.nikhu.ecommerce.shoppingcart
 
+import akka.cluster.sharding.ShardRegion
+import akka.persistence.{RecoveryCompleted, SnapshotOffer}
 import com.nikhu.ecommerce.shoppingcart.Cart.State
 import com.nikhu.ecommerce.shoppingcart.CartStatus.CartStatus
-import ddd.cqrs.{AggregateRoot, AggregateState}
+import ddd.cqrs.{AggregateRoot, AggregateState, DomainEvent}
 
 /**
   * Created by vsubbarravuri on 8/29/16.
@@ -38,7 +40,16 @@ object Cart {
       case CheckoutCart(_, _) =>
         copy(status = CartStatus.Checkout)
     }
+  }
 
+  def extractEntityId(): ShardRegion.ExtractEntityId = {
+    case msg@CreateCart(id, _) => (id.value.toString, msg)
+    case msg@AddToCart(id, _) => (id.value.toString, msg)
+  }
+
+  def extractShardId(numberOfShards: Int): ShardRegion.ExtractShardId = {
+    case CreateCart(id, _) => Math.abs(id.hashCode() % numberOfShards).toString
+    case AddToCart(id, _) =>  Math.abs(id.hashCode() % numberOfShards).toString
   }
 
 }
@@ -54,7 +65,6 @@ class Cart extends AggregateRoot[State] {
       State(cartId, CartStatus.Created, items)
     }
   }
-
 
   override def handleCommand: Receive = {
     case cmd: CreateCart => {
